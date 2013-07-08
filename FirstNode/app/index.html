@@ -1,0 +1,66 @@
+<html>
+<head>
+	<title>Start Page</title>
+	<script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.1/jquery.min.js"></script>
+	<script src="/socket.io/socket.io.js"></script>
+	<script>
+		var socket = io.connect('http://192.168.1.10');
+		socket.on('update-chat', function (data) {
+			console.log('update-chat', data);
+
+			$chatbox.empty();
+			
+			$.each( data.chatlog, function(i, msg){
+				console.log( msg )
+				$chatbox.append( 
+					$('<p>').text( msg )
+				);
+			});
+		});
+
+		socket.on('clear-chat', function(){
+			$chatbox.empty();
+		});
+
+		$(document).ready(function(){
+			$chatForm = $('#chat_form');
+			$chatbox = $('.chat-box');
+
+			function addToChat(){
+				var msg = $('textarea').val();
+				socket.emit('chat', { msg: msg });
+				$('textarea').val('');
+			}
+
+			$chatForm.submit(function(e){
+				e.preventDefault();
+				addToChat();
+			});
+
+			$('textarea').on('keypress', function(e){
+				if( e.keyCode == 13 ){
+					addToChat();
+				}
+			})
+
+			$('.clear-chat-btn').click(function(e){
+				e.preventDefault();
+				socket.emit('clear-chat');
+			});
+		});
+	</script>
+</head>
+<body>
+	<h1>Start Page</h1>
+
+	<h3>Chat</h3>
+	<div class="chat-box"></div>
+
+	<form>
+		<textarea></textarea>
+		<button class="submit-chat">Submit</button>
+	</form>
+
+	<a href="#" class="clear-chat-btn">Clear Chat</a>
+</body>
+</html>

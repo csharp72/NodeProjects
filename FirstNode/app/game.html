@@ -1,0 +1,182 @@
+<html>
+<head>
+	<title>Game</title>
+	<script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.1/jquery.min.js"></script>
+	<script src="/socket.io/socket.io.js"></script>
+	<script>
+		var socket = io.connect('http://192.168.1.10');
+
+		//socket.sessionid
+
+		var thisPlayer;
+		var $gamePiece;
+
+		function makePlayer( player ){
+			console.log('player=', player)
+			var $newPlayer = $gamePieceTemplate.clone();
+			$newPlayer.player = player;
+			$newPlayer.attr('id', player.id );
+			$newPlayer.x = player.x;
+			$newPlayer.y = player.y;
+
+			$newPlayer.css({
+				"background-color": player.color,
+				left: player.x * (800-player.diameter),
+				top: player.y * (400-player.diameter),
+				height: player.diameter,
+				width: player.diameter
+			});
+
+			$newPlayer.appendTo( $gameBoard );
+
+
+			console.log( player, thisPlayer )
+			if( player.id == thisPlayer.id ){
+				$gamePiece = $newPlayer;
+			}
+
+			return $newPlayer;
+		}
+
+		function startLoop(){
+			var keys = {
+				87: 'up',
+				65: 'left',
+				83: 'down',
+				68: 'right'
+			}
+
+			$(document).on('keydown', function(e){
+				if (keys[ e.keyCode ])
+					thisPlayer[ keys[ e.keyCode ] ] = true;
+			});
+
+			$(document).on('keyup', function(e){
+				if (keys[ e.keyCode ]) 
+					thisPlayer[ keys[ e.keyCode ] ] = false;
+			});
+			
+			setInterval(function(){
+				var oldY = thisPlayer.y;
+				var oldX = thisPlayer.x;
+
+				if( thisPlayer.up ){
+					thisPlayer.y -= .02;
+				}
+
+				if( thisPlayer.down ){
+					thisPlayer.y += .02;
+				}
+
+				if( thisPlayer.left ){
+					thisPlayer.x -= .02;
+				}
+
+				if( thisPlayer.right ){
+					thisPlayer.x += .02;
+				}
+
+				thisPlayer.x = Math.min(1, Math.max(0, thisPlayer.x));
+				thisPlayer.y = Math.min(1, Math.max(0, thisPlayer.y));
+
+				if( oldX != thisPlayer.x || oldY != thisPlayer.y ){
+					console.log( 'move', thisPlayer.x, thisPlayer.y )
+					socket.emit('player-move', thisPlayer.x, thisPlayer.y);
+				}
+
+			}, 100);
+		}
+
+		socket.on('start-game', function( player ){
+			console.log('start-game')
+			$gameBoard.show();
+			$chooseName.hide();
+
+			thisPlayer = player;
+
+			startLoop();
+		})
+
+		socket.on('update-players', function( players ){
+			console.log( 'update-players', players );
+			$('.game-piece').remove();
+			$.each( players, function(i, player){
+				makePlayer( player );
+			});
+		});
+
+		socket.on('drop-food', function(foods){
+			//console.log( foods );
+			$('.food').remove();
+			$.each(foods, function(i, food){
+				var $newFood = $foodTemplate.clone();
+				$newFood.css({
+					width: food.diameter,
+					height: food.diameter,
+					left: food.x * (800-food.diameter),
+					top: food.y * (400-food.diameter)
+				});
+
+				$newFood.appendTo( $gameBoard );
+
+			});
+		});
+
+		$(document).ready(function(){
+			$chooseName = $('.choose-name').on('submit', function(e){
+				e.preventDefault();
+				var name = $('.nickname').val();
+				socket.emit('set nickname', name, function( player ){
+					//callback
+				});
+			});
+
+			$gameBoard = $('#game_board');
+			$gamePieceTemplate = $('.game-piece').detach();
+			$foodTemplate = $('.food').detach();
+			
+		});
+	</script>
+
+	<style>
+		#game_board{
+			width: 800px;
+			height: 400px;
+			background-color: #ccc;
+			position: relative;
+			display: none;
+		}
+
+		.game-piece{
+			width: 50px;
+			height: 50px;
+			background-color: red;
+			border-radius: 9999px;
+			position: absolute;
+			opacity: .5;
+			border: rgba(0,0,0,.4) 1px solid;
+			box-sizing: border-box;
+			-moz-box-sizing: border-box;
+		}
+
+		.food{
+			background-color: brown;
+			position: absolute;
+			border-radius: 6px;
+		}
+	</style>
+</head>
+<body>
+	<h1>Game</h1>
+
+	<form class="choose-name">
+		<p>Choose a nickname:</p>
+		<input class="nickname" />
+		<input type="submit" value="Submit" />
+	</form>
+	<div id="game_board">
+		<div class="food"></div>
+		<div class="game-piece"></div>
+	</div>
+</body>
+</html>

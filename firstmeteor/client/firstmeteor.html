@@ -1,0 +1,23 @@
+<head>
+  <title>firstmeteor</title>
+</head>
+
+<body>
+	<div id="top_bar">
+		{{loginButtons}}
+	</div>
+	<div id="main_window">
+		{{> hello}}
+		{{> chrono}}
+	</div>
+</body>
+
+<template name="chrono">
+	<div class="chrono-sprite"></div>
+</template>
+
+<template name="hello">
+  <h1>Hello World!</h1>
+  {{greeting}}
+  <input type="button" value="Click" />
+</template>
