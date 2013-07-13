@@ -24,8 +24,6 @@ Template.chrono.rendered = function(){
 			'left': chrono.x,
 			'top': chrono.y
 		});
-
-
 	});
 
 };
