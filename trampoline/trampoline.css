@@ -1,0 +1,11 @@
+/* CSS declarations go here */
+
+object:focus{
+	outline: none;
+}
+
+.game-container{
+	width: 800px;
+	height: 600px;
+	margin: 0 auto;
+}

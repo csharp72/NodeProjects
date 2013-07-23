@@ -1,0 +1,1 @@
+﻿package com {		import flash.display.MovieClip;			public class Lava extends MovieClip {						public function Lava() {			// constructor code		}	}	}
