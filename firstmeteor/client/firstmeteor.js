@@ -16,8 +16,8 @@ Template.hello.events({
 
 Template.chrono.rendered = function(){
 
-	chrono = new Chrono('.chrono-sprite');
-	chrono.walk('left');
+	chrono = new Chrono('.chrono');
+	// chrono.walk('left');
 
 	onFrame(function(){
 		chrono.css({
@@ -26,22 +26,25 @@ Template.chrono.rendered = function(){
 		});
 	});
 
-
-
 };
 
+var keys = {
+	65: 'left',
+	68: 'right',
+	16: 'run',
+	32: 'jump',
+}
+
 $(document).ready(function(){
-	var keys = {
-		65: 'left',
-		68: 'right',
-		87: 'up',
-		83: 'down'
-	}
 	$(this).on('keydown', function(e){
-		console.log( e.keyCode, keys[e.keyCode] )
-		keys[e.keyCode] && chrono.walk(keys[e.keyCode]);
+		console.info( 'keydown=', e.keyCode )
+		if( keys[e.keyCode]){
+			chrono.sendCmd( keys[e.keyCode], true );
+		}
 	}).on('keyup', function(e){
-		chrono.stop();
+		if( keys[e.keyCode]){
+			chrono.sendCmd( keys[e.keyCode], false );
+		}
 	})
 });
 
@@ -87,40 +90,133 @@ var Chrono = function(selector){
 
 		this.x = 800;
 		this.y = 0;
-		this.direction = null;
+		this.direction = 'left';
 		this.width = 22;
-		this.step = 1;
+		this.step = 0;
 		this.speed = 8;
 		this.maxSpeed = 10;
+		this.sprite = this.find('.sprite');
+		this.cmds = {}
 
-		$chrono.walk = function(dir){
-			var that = this;
-			this.direction = dir;
-			this.playing = true;
+		this.animations = {
+			//left, top, width, frames, x-movement, y-movement
+			stand: {
+				left: [
+					[-183, -195, 14],
+				],
+				right: [
+					[-202, -503, 14]
+				]
+			},
+			walk: {
+				left : [
+					[-163, -195, 15],
+					[-138, -195, 21],
+					[-119, -195, 14],
+					[-100, -195, 14],
+					[-73, -195, 22],
+					[-55, -195, 14],
+				],
+				right : [
+					[-202, -195, 15],
+					[-220, -195, 21],
+					[-247, -195, 14],
+					[-267, -195, 14],
+					[-287, -195, 22],
+					[-314, -195, 14],
+				]
+			},
+
+			run: {
+				left : [
+					[-163, -195, 15],
+					[-120, -305, 28],
+					[-119, -195, 14],
+					[-100, -195, 14],
+					[-88, -305, 28],
+					[-55, -195, 14]
+				],
+				right : [
+					[-202, -195, 15],
+					[-253, -305, 28],
+					[-247, -195, 14],
+					[-267, -195, 14],
+					[-284, -305, 28],
+					[-314, -195, 14],
+				]
+			},
+
+			jump: {
+				left: [
+					[-135, -545, 26, 5, 0, 0]
+				]
+			}
 		}
 
-		$chrono.playFrame = function(dir){
-			var steps = {
-				left: [ -160, -137, -115, -96, -73, -51 ],
-				right: [ -198, -220, -242, -263, -287, -309 ],
-				up: [ -160, -137, -115, -96, -73, -51 ],
-				down: [ -199, -220, -242, -263, -287, -309 ]
-			}
-			var movement = {
-				left: ['x', -6],
-				right: ['x', 6],
-				up: ['y', -6],
-				down: ['y', 6]
-			}
-			var frames = steps[dir].length;
-			var frame = {top:-195}
+		this.animation = this.animations.stand.left;
+		this.playing = true;
 
-			if( this.playing ){
-				frame.left = steps[dir][ this.step++ % frames ];
-				this.css( 'backgroundPosition', frame.left + "px " + frame.top + "px" );
-				this[movement[dir][0]] += movement[dir][1];
+		// $chrono.play = function(anim, dir){
+		// 	var that = this;
+		// 	this.playing = true;
+		// 	if( this.animation != this.animations[ anim ][ dir ] ){
+		// 		console.log('play', anim)
+		// 		this.step = 0;
+		// 		this.animation = this.animations[ anim ][ dir ]
+		// 	}
+		// }
+
+		$chrono.playFrame = function(i){
+
+			if( this.playing && i % 8 == 0 ){
+
+				var modX = 0;
+				var modY = 0;
+				var anim = 'stand';
+
+				if( this.cmds.left && !this.cmds.right ){
+					this.direction = 'left'
+					anim = 'walk';
+					modX -= 6;
+				}
+				if( this.cmds.right && !this.cmds.left){
+					this.direction = 'right'
+					anim = 'walk';
+					modX += 6;
+				}
+
+				if( this.cmds.run && (this.cmds.left || this.cmds.right) ){
+					anim = 'run';
+					modX *= 3;
+				}
+
+				if( this.cmds.jump ){
+					anim = 'jump',
+					modY = 3;
+				}
+
+				this.animation = this.animations[anim][this.direction] || this.animations[anim].left || this.animations[anim].right
+				console.log( this.cmds, anim )
+			
+				var frames = this.animation.length;
+				var frame = this.animation[ this.step++ % frames ]
+
+				//console.log( this.cmds, anim, i, this.animation.length, this.step, frame, this.sprite )
+
+				this.sprite.css({
+					'backgroundPosition' : frame[0] + "px " + frame[1] + "px",
+					'width' : frame[2]
+				});
+
+				this.x += modX;
+				this.y += modY;
+
 			}
 
+		}
+
+		$chrono.sendCmd = function(cmd, io){
+			this.cmds[cmd] = io;
 		}
 
 		$chrono.stop = function(){
@@ -128,8 +224,7 @@ var Chrono = function(selector){
 		}
 
 		onFrame(function(i){
-			if( i % ($chrono.maxSpeed+1 - $chrono.speed) == 0 )
-				$chrono.playFrame( $chrono.direction );
+			$chrono.playFrame(i);
 		});
 
 	}).call($chrono);
